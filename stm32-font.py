@@ -64,7 +64,7 @@ def generate_font_data(font, x_size, y_size):
         # Calculate size and margins for centered text
         _, _, w, h = font.getbbox(ch)
         x_margin = (x_size - w) // 2
-        y_margin = (y_size - h)
+        y_margin = (y_size - h) // 2
         margin = (x_margin, y_margin)
         im_size = (x_size, y_size)
 
@@ -88,16 +88,16 @@ def generate_font_data(font, x_size, y_size):
     return data
 
 
-def output_files(font, font_widths, font_height, font_data, font_name):
+def output_files(font, font_widths, font_height, font_size, font_data, font_name):
     generated_time = time.strftime("%Y-%m-%d %H:%M:%S")
 
     # create filename, remove invalid chars
-    filename = f'Font{font_name}{font_height}'
+    filename = f'Font{font_name}{font_size}'
     filename = ''.join(c if c.isalnum() else '' for c in filename)
 
     # C file template
     output = f"""/**
- * This file provides '{font_name}' [{font_height}px] text font
+ * This file provides '{font_name}' [{font_size}px] text font
  * for STM32xx-EVAL's LCD driver.
  *
  * Generated on {generated_time}
@@ -106,7 +106,7 @@ def output_files(font, font_widths, font_height, font_data, font_name):
 
 #include "fonts.h"
 
-#define {filename}_Name ("{font_name} {font_height}px")
+#define {filename}_Name ("{font_name} {font_size}px")
 
 // {font_data.count('0x')} bytes
 const uint8_t {filename}_Table [] = {{{font_data}}};
@@ -182,9 +182,9 @@ if __name__ == '__main__':
 
     # create font type
     font_type = args.font
-    font_height = args.size
+    font_size = args.size
 
-    myfont = ImageFont.truetype(font_type, size=font_height)
+    myfont = ImageFont.truetype(font_type, size=font_size)
     font_widths, font_heights = get_font_sizes(myfont)
 
     # while max(font_heights) > args.size:
@@ -197,12 +197,13 @@ if __name__ == '__main__':
         font_name = myfont.font.family
 
     # generate the C file data
-    font_data = generate_font_data(myfont, max(font_widths), font_height)
+    font_data = generate_font_data(myfont, max(font_widths), max(font_heights))
     font_data = textwrap.indent(font_data, ' ' * 4)
 
     # output everything
     output_files(font=myfont,
                  font_widths=font_widths,
-                 font_height=font_height,
+                 font_height=max(font_heights), 
+                 font_size=font_size,
                  font_data=font_data,
                  font_name=font_name)
