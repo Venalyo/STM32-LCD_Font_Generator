@@ -10,7 +10,7 @@
             "request": "launch",
             "program": "${workspaceFolder}\\stm32-font.py",
             "console": "integratedTerminal",
-            "args": "--font C:\\Windows\\Fonts\\Segoeui.ttf --size 12 --name Segoeui --charset ${workspaceFolder}\\charset.txt --threshold 127"
+            "args": "--font C:\\Windows\\Fonts\\Segoeui.ttf --size 24 --name Segoeui --charset ${workspaceFolder}\\charset.txt --threshold 96"
         }
     ]
 }

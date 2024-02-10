@@ -64,7 +64,7 @@ def generate_font_data(font, x_size, y_size):
         # Calculate size and margins for centered text
         _, _, w, h = font.getbbox(ch)
         x_margin = (x_size - w) // 2
-        y_margin = (y_size - h) // 2
+        y_margin = 0  # (y_size - h) // 2
         margin = (x_margin, y_margin)
         im_size = (x_size, y_size)
 
