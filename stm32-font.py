@@ -17,12 +17,14 @@ def get_charset_perceived():
     return regex.findall(r'\X', CHAR_SET)
 
 
-def get_widths(font):
+def get_font_sizes(font):
     widths = []
+    heights = []
     for ch in get_charset_perceived():
-        w = font.getlength(ch)
-        widths.append(int(math.ceil(w)))
-    return widths
+        _, _, w, h = font.getbbox(ch)
+        widths.append(w)
+        heights.append(h)
+    return widths, heights
 
 
 def bin_to_c_hex_array(bin_text, bytes_per_line, lsb_padding=0, msb_padding=0):
@@ -62,7 +64,7 @@ def generate_font_data(font, x_size, y_size):
         # Calculate size and margins for centered text
         _, _, w, h = font.getbbox(ch)
         x_margin = (x_size - w) // 2
-        y_margin = (y_size - h) // 2
+        y_margin = (y_size - h)
         margin = (x_margin, y_margin)
         im_size = (x_size, y_size)
 
@@ -137,13 +139,13 @@ sFONT {filename} = {{
     with open(f'{filename}.h', 'w') as f:
         f.write(output)
 
-    # Output preview of font
-    _, _, w, h = font.getbbox(CHAR_SET)
-    size = (w, h)
-    im = Image.new("RGB", size)
-    drawer = ImageDraw.Draw(im)
-    drawer.text((0, 0), CHAR_SET, font=font)
-    im.save(f'{filename}.png')
+    # # Output preview of font
+    # _, _, w, h = font.getbbox(CHAR_SET)
+    # size = (w, h)
+    # im = Image.new("RGB", size)
+    # drawer = ImageDraw.Draw(im)
+    # drawer.text((0, 0), CHAR_SET, font=font)
+    # im.save(f'{filename}.png')
 
 
 if __name__ == '__main__':
@@ -186,7 +188,11 @@ if __name__ == '__main__':
     font_height = args.size
 
     myfont = ImageFont.truetype(font_type, size=font_height)
-    font_widths = get_widths(myfont)
+    font_widths, font_heights = get_font_sizes(myfont)
+
+    # while max(font_heights) > args.size:
+    #     myfont = ImageFont.truetype(font_type, size=myfont.size - 1)
+    #     font_widths, font_heights = get_font_sizes(myfont)
 
     if args.name:
         font_name = args.name
