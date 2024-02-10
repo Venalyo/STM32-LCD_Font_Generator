@@ -9,7 +9,7 @@ import regex
 # Greyscale threshold from 0 - 255
 THRESHOLD = 128
 # Font Character Set
-CHAR_SET = ' !"#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~'
+CHAR_SET = r' !"#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~'
 
 
 def get_charset_perceived():
@@ -17,12 +17,12 @@ def get_charset_perceived():
     return regex.findall(r'\X', CHAR_SET)
 
 
-def get_max_width(font):
+def get_widths(font):
     widths = []
     for ch in get_charset_perceived():
-        w, h = font.getsize(ch)
-        widths.append(w)
-    return max(widths)
+        w = font.getlength(ch)
+        widths.append(int(math.ceil(w)))
+    return widths
 
 
 def bin_to_c_hex_array(bin_text, bytes_per_line, lsb_padding=0, msb_padding=0):
@@ -40,7 +40,7 @@ def bin_to_c_hex_array(bin_text, bytes_per_line, lsb_padding=0, msb_padding=0):
     bin_list = map(lambda a: "0x{:02X}".format(int(a, 2)), bin_list)
     array = ', '.join(bin_list)
 
-    return f'{array}, /* |{comment}| */\r\n'
+    return f'{array}, /* |{comment}| */\n'
 
 
 def generate_font_data(font, x_size, y_size):
@@ -56,11 +56,11 @@ def generate_font_data(font, x_size, y_size):
         assert data.count('0x') == array_offset
 
         # comment separator for each char
-        data += '\r\n'
-        data += f"// @{array_offset} '{ch}' ({font_width} pixels wide)\r\n"
+        data += '\n'
+        data += f"// @{array_offset} '{ch}' ({font_width} pixels wide)\n"
 
         # Calculate size and margins for centered text
-        w, h = font.getsize(ch)
+        _, _, w, h = font.getbbox(ch)
         x_margin = (x_size - w) // 2
         y_margin = (y_size - h) // 2
         margin = (x_margin, y_margin)
@@ -120,7 +120,8 @@ sFONT {filename} = {{
         f.write(output)
 
     # Output preview of font
-    size = font.getsize(CHAR_SET)
+    _, _, w, h = font.getbbox(CHAR_SET)
+    size = (w, h)
     im = Image.new("RGB", size)
     drawer = ImageDraw.Draw(im)
     drawer.text((0, 0), CHAR_SET, font=font)
@@ -152,7 +153,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     if args.charset:
-        with open(args.charset) as f:
+        with open(args.charset, encoding="utf-8") as f:
             CHAR_SET = f.read().splitlines()[0]
 
     # create font type
@@ -160,7 +161,8 @@ if __name__ == '__main__':
     font_height = args.size
 
     myfont = ImageFont.truetype(font_type, size=font_height)
-    font_width = get_max_width(myfont)
+    widths = get_widths(myfont)
+    font_width = max(widths)
 
     if args.name:
         font_name = args.name
