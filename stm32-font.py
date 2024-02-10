@@ -57,7 +57,7 @@ def generate_font_data(font, x_size, y_size):
 
         # comment separator for each char
         data += '\n'
-        data += f"// @{array_offset} '{ch}' ({font_width} pixels wide)\n"
+        data += f"// @{array_offset} '{ch}' ({x_size} pixels wide)\n"
 
         # Calculate size and margins for centered text
         _, _, w, h = font.getbbox(ch)
@@ -86,7 +86,7 @@ def generate_font_data(font, x_size, y_size):
     return data
 
 
-def output_files(font, font_width, font_height, font_data, font_name):
+def output_files(font, font_widths, font_height, font_data, font_name):
     generated_time = time.strftime("%Y-%m-%d %H:%M:%S")
 
     # create filename, remove invalid chars
@@ -109,11 +109,29 @@ def output_files(font, font_width, font_height, font_data, font_name):
 // {font_data.count('0x')} bytes
 const uint8_t {filename}_Table [] = {{{font_data}}};
 
+const uint8_t {filename}_Width [] = {{
+    {", ".join([str(w) for w in font_widths])}
+}};
+
+const uint8_t {filename}_LeftMargin [] = {{
+    {", ".join([str((max(font_widths) - w) // 2) for w in font_widths])}
+}};
+
+#ifdef FONT_WITH_WIDTH
+swFONT {filename} = {{
+    {filename}_Table,
+    {max(font_widths)}, /* Width */
+    {font_height}, /* Height */
+    {filename}_Width,
+    {filename}_LeftMargin,
+}};
+#else
 sFONT {filename} = {{
     {filename}_Table,
-    {font_width}, /* Width */
+    {max(font_widths)}, /* Width */
     {font_height}, /* Height */
 }};
+#endif
 """
     # Output font C header file
     with open(f'{filename}.h', 'w') as f:
@@ -150,19 +168,25 @@ if __name__ == '__main__':
                         type=str,
                         help='Custom charset from file [filename]',
                         required=False)
+    parser.add_argument('-t', '--threshold',
+                        type=int,
+                        help='Greyscale threshold from 0 - 255',
+                        default=128,
+                        required=False)
     args = parser.parse_args()
 
     if args.charset:
         with open(args.charset, encoding="utf-8") as f:
             CHAR_SET = f.read().splitlines()[0]
 
+    THRESHOLD = args.threshold
+
     # create font type
     font_type = args.font
     font_height = args.size
 
     myfont = ImageFont.truetype(font_type, size=font_height)
-    widths = get_widths(myfont)
-    font_width = max(widths)
+    font_widths = get_widths(myfont)
 
     if args.name:
         font_name = args.name
@@ -170,12 +194,12 @@ if __name__ == '__main__':
         font_name = myfont.font.family
 
     # generate the C file data
-    font_data = generate_font_data(myfont, font_width, font_height)
+    font_data = generate_font_data(myfont, max(font_widths), font_height)
     font_data = textwrap.indent(font_data, ' ' * 4)
 
     # output everything
     output_files(font=myfont,
-                 font_width=font_width,
+                 font_widths=font_widths,
                  font_height=font_height,
                  font_data=font_data,
                  font_name=font_name)
